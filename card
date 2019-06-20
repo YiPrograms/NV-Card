@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+function gpu_on {
+    echo 'Enabling NVIDIA GPU'
+    sudo tee /proc/acpi/bbswitch <<< ON
+    echo 'Loading nvidia module'
+    sudo modprobe nvidia
+    echo 'Loading nvidia_drm module'
+    sudo modprobe nvidia_drm
+    echo -n 'Current state of NVIDIA GPU: '
+    cat /proc/acpi/bbswitch
+}
+
+function gpu_off {
+    echo 'Unloading nvidia_drm module'
+    sudo rmmod nvidia_drm
+    echo 'Unloading nvidia_modeset module'
+    sudo rmmod nvidia_modeset
+    echo 'Unloading nvidia_uvm module'
+    sudo rmmod nvidia_uvm
+    echo 'Unloading nvidia module'
+    sudo rmmod nvidia
+    echo 'Disabling NVIDIA GPU'
+    sudo tee /proc/acpi/bbswitch <<< OFF
+    echo -n 'Current state of NVIDIA GPU: '
+    cat /proc/acpi/bbswitch
+}
+
+function gpu_stat {
+    echo -n 'Current state of NVIDIA GPU: '
+    cat /proc/acpi/bbswitch
+    nvidia-smi
+}
+
+function helpmsg {
+    echo "Discrete NVIDIA graphics card switcher"
+    echo "Usage: "
+    echo "  card [options]"
+    echo "Options: "
+    echo "  on      Turn the discrete graphics card ON"
+    echo "  off     Turn the discrete graphics card OFF"
+    echo "  run     Turn the card on and turn the card off after running"
+    echo "  stat    Display the card's current state"
+    echo "  watch   Watch the card's current state"
+}
+
+if [ "$1" = "on" ] ;then
+    gpu_on
+elif [ "$1" = "off" ]; then
+    gpu_off
+elif [ "$1" = "run" ]; then
+    gpu_on
+    watch -n 2 card stat
+    gpu_off
+elif [ "$1" = "stat" ]; then
+    gpu_stat
+elif [ "$1" = "watch" ]; then
+    watch -n 2 card stat
+else 
+    helpmsg
+fi
