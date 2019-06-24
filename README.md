@@ -10,15 +10,19 @@ sudo cp NV-Card/card /usr/local/bin
 
 ## Usage
 
-`card on` : Turn the card on
+`card on` : Turn the graphics card on
 
-`card off` : Turn the card off
+`card off` : Turn the graphics card off
 
 `card run` : Turn the card on and turn it off after keyboard interruption
 
-`card stat` : Show card status
+`card stat` : Show graphics card status
 
-`card watch` : Refresh card status constantly
+`card watch` : Monitor graphics card status
+
+`card display` : Start external display
+
+`card [command]` : Run [command] using optirun
 
 ## Special Thanks
 

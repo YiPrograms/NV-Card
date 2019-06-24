@@ -32,30 +32,44 @@ function gpu_stat {
     nvidia-smi
 }
 
+function ext_display {
+    echo 'You can now plug in your external display'
+    intel-virtual-output -f
+}
+
 function helpmsg {
     echo "Discrete NVIDIA graphics card switcher"
     echo "Usage: "
-    echo "  card [options]"
+    echo "  card [options/app]"
     echo "Options: "
     echo "  on      Turn the discrete graphics card ON"
     echo "  off     Turn the discrete graphics card OFF"
-    echo "  run     Turn the card on and turn the card off after running"
-    echo "  stat    Display the card's current state"
-    echo "  watch   Watch the card's current state"
+    echo "  run     Turn the card on and turn it off after keyboard interruption"
+    echo "  stat    Show graphics card status"
+    echo "  watch   Monitor graphics card status"
+    echo "  display Start external display (requires intel-virtual-output)"
+    echo "  [app]   Run command using optirun (requires bumblebee)"
 }
 
-if [ "$1" = "on" ] ;then
-    gpu_on
-elif [ "$1" = "off" ]; then
-    gpu_off
-elif [ "$1" = "run" ]; then
-    gpu_on
-    watch -n 2 card stat
-    gpu_off
-elif [ "$1" = "stat" ]; then
-    gpu_stat
-elif [ "$1" = "watch" ]; then
-    watch -n 2 card stat
-else 
+if [ -n "$1" ]; then
+    if [ "$1" = "on" ] ;then
+        gpu_on
+    elif [ "$1" = "off" ]; then
+        gpu_off
+    elif [ "$1" = "run" ]; then
+        gpu_on
+        watch -n 2 card stat
+        gpu_off
+    elif [ "$1" = "stat" ]; then
+        gpu_stat
+    elif [ "$1" = "watch" ]; then
+        watch -n 2 card stat
+    elif [ "$1" = "display" ]; then
+        ext_display
+    else
+        echo "Running command: optirun $1"
+        eval "optirun $1"
+    fi
+else
     helpmsg
 fi
