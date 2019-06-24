@@ -3,10 +3,18 @@ A script to switch NVIDIA graphics card using bbswitch
 
 ## Installation
 
+### Manual
+
 ```shell
 git clone https://github.com/YiPrograms/NV-Card.git
 sudo cp NV-Card/card /usr/local/bin
 ```
+
+### Arch Linux
+
+AUR package is available [here](https://aur.archlinux.org/packages/nv-card/)
+
+`yay nv-card`
 
 ## Usage
 
