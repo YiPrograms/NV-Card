@@ -1,20 +1,31 @@
 # NV-Card
-A script to switch NVIDIA graphics card using bbswitch
+A script to switch NVIDIA graphics card
 
 ## Installation
 
 ### Manual
 
+- For bbswitch method
 ```shell
 git clone https://github.com/YiPrograms/NV-Card.git
 sudo cp NV-Card/card /usr/local/bin
 ```
 
+- For kernel PM method
+```shell
+git clone https://github.com/YiPrograms/NV-Card.git
+cd NV-Card
+git checkout nv-card-pm
+sudo cp card /usr/local/bin
+```
+
 ### Arch Linux
 
-AUR package is available [here](https://aur.archlinux.org/packages/nv-card/)
+AUR package is available [here](https://aur.archlinux.org/packages/nv-card/) and [here](https://aur.archlinux.org/packages/nv-card-pm/)
 
-`yay nv-card`
+`yay nv-card` for bbswitch version, or
+`yay nv-card-pm` for kernel PM version
+
 
 ## Usage
 
