@@ -1,35 +1,81 @@
 #!/usr/bin/env bash
 
-function gpu_on {
-    echo 'Enabling NVIDIA GPU'
-    sudo tee /proc/acpi/bbswitch <<< ON
-    echo 'Loading nvidia module'
-    sudo modprobe nvidia
-    echo 'Loading nvidia_drm module'
-    sudo modprobe nvidia_drm
-    echo -n 'Current state of NVIDIA GPU: '
-    cat /proc/acpi/bbswitch
+## +------------------------------------------------------------------+
+## | Modified from https://github.com/Witko/nvidia-xrun by YiPrograms |
+## +------------------------------------------------------------------+
+
+# Remove the card from the system after the command exists
+# and modules unload: the card will be readded in the next nvidia-xrun
+# execution before loading the nvidia module again. This is recommended as Xorg
+# and some other programs tend to load the nvidia module if they detect a
+# nvidia card in the system, and when the module is loaded the card can't save
+# power.
+REMOVE_DEVICE=1
+
+# Bus ID of the PCI express controller
+CONTROLLER_BUS_ID=0000:00:01.0
+
+# Bus ID of the graphic card
+DEVICE_BUS_ID=0000:01:00.0
+
+# Seconds to wait before turning on the card after PCI devices rescan
+BUS_RESCAN_WAIT_SEC=1
+
+# Ordered list of modules to load before running the command
+MODULES_LOAD=(nvidia nvidia_uvm nvidia_modeset "nvidia_drm modeset=1")
+
+# Ordered list of modules to unload after the command exits
+MODULES_UNLOAD=(nvidia_drm nvidia_modeset nvidia_uvm nvidia)
+
+
+function load_modules {
+  for module in "${MODULES_LOAD[@]}"
+  do
+    echo "Loading module ${module}"
+    sudo modprobe ${module}
+  done
 }
 
-function gpu_off {
-    echo 'Unloading nvidia_drm module'
-    sudo rmmod nvidia_drm
-    echo 'Unloading nvidia_modeset module'
-    sudo rmmod nvidia_modeset
-    echo 'Unloading nvidia_uvm module'
-    sudo rmmod nvidia_uvm
-    echo 'Unloading nvidia module'
-    sudo rmmod nvidia
-    echo 'Disabling NVIDIA GPU'
-    sudo tee /proc/acpi/bbswitch <<< OFF
-    echo -n 'Current state of NVIDIA GPU: '
-    cat /proc/acpi/bbswitch
+function unload_modules {
+  for module in "${MODULES_UNLOAD[@]}"
+  do
+    echo "Unloading module ${module}"
+    sudo modprobe -r ${module}
+  done
 }
 
-function gpu_stat {
-    echo -n 'Current state of NVIDIA GPU: '
-    cat /proc/acpi/bbswitch
-    nvidia-smi
+function turn_off_gpu {
+  unload_modules
+
+  if [[ "$REMOVE_DEVICE" == '1' ]]; then
+    echo 'Removing Nvidia bus from the kernel'
+    sudo tee /sys/bus/pci/devices/${DEVICE_BUS_ID}/remove <<<1
+  else
+    echo 'Enabling powersave for the graphic card'
+    sudo tee /sys/bus/pci/devices/${DEVICE_BUS_ID}/power/control <<<auto
+  fi
+  echo 'Enabling powersave for the PCIe controller'
+  sudo tee /sys/bus/pci/devices/${CONTROLLER_BUS_ID}/power/control <<<auto
+}
+
+function turn_on_gpu {
+  echo 'Turning the PCIe controller on to allow card rescan'
+  sudo tee /sys/bus/pci/devices/${CONTROLLER_BUS_ID}/power/control <<<on
+
+  echo 'Waiting 1 second'
+  sleep 1
+
+  if [[ ! -d /sys/bus/pci/devices/${DEVICE_BUS_ID} ]]; then
+    echo 'Rescanning PCI devices'
+    sudo tee /sys/bus/pci/rescan <<<1
+    echo "Waiting ${BUS_RESCAN_WAIT_SEC} second for rescan"
+    sleep ${BUS_RESCAN_WAIT_SEC}
+  fi
+
+  echo 'Turning the card on'
+  sudo tee /sys/bus/pci/devices/${DEVICE_BUS_ID}/power/control <<<on
+
+  load_modules
 }
 
 function ext_display {
@@ -37,8 +83,15 @@ function ext_display {
     intel-virtual-output -f
 }
 
+function gpu_stat {
+    if ! lspci | grep -i -e 'VGA.*NVIDIA'; then
+        echo 'NVIDIA card is removed from device tree!'
+    fi
+    nvidia-smi
+}
+
 function helpmsg {
-    echo "Discrete NVIDIA graphics card switcher"
+    echo "Discrete NVIDIA graphics card switcher (kernel PM mode)"
     echo "Usage: "
     echo "  card [options/app]"
     echo "Options: "
@@ -53,13 +106,13 @@ function helpmsg {
 
 if [ -n "$1" ]; then
     if [ "$1" = "on" ] ;then
-        gpu_on
+        turn_on_gpu
     elif [ "$1" = "off" ]; then
-        gpu_off
+        turn_off_gpu
     elif [ "$1" = "run" ]; then
-        gpu_on
+        turn_on_gpu
         watch -n 2 card stat
-        gpu_off
+        turn_off_gpu
     elif [ "$1" = "stat" ]; then
         gpu_stat
     elif [ "$1" = "watch" ]; then
